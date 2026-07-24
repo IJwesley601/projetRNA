@@ -1,0 +1,11 @@
+pymupdf
+sentence-transformers
+scikit-learn
+anthropic
+pydantic
+tenacity
+pandas
+matplotlib
+streamlit
+python-dotenv
+jupyter
