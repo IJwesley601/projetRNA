@@ -1,11 +1,11 @@
 pymupdf
-sentence-transformers
-scikit-learn
-anthropic
+openai
 pydantic
 tenacity
 pandas
 matplotlib
 streamlit
 python-dotenv
-jupyter
+joblib
+numpy
+pytest
