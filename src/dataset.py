@@ -38,6 +38,7 @@ class Annotation:
     page: int
     label: int  # 1 = quizable, 0 = non quizable
     annotated_by: str = "manuel"
+    source_type: str = "texte"  # "texte", "image_ocr" ou "image_description" (cf. extraction.py)
 
 
 def append_annotation(annotation: Annotation, path: str = DEFAULT_DATASET_PATH) -> None:
@@ -62,9 +63,17 @@ def load_annotations(path: str = DEFAULT_DATASET_PATH) -> list[Annotation]:
     return annotations
 
 
-def already_annotated_ids(path: str = DEFAULT_DATASET_PATH) -> set[str]:
-    """IDs des passages déjà annotés (évite de redemander deux fois le même passage)."""
-    return {a.passage_id for a in load_annotations(path)}
+def already_annotated_ids(path: str = DEFAULT_DATASET_PATH) -> set[tuple[str, str]]:
+    """Couples (source_doc, passage_id) déjà annotés.
+
+    Important : passage_id seul ne suffit pas, car il est régénéré à partir
+    de "p0001", "p0002", ... à CHAQUE extraction (voir extraction.py) --
+    deux documents différents peuvent donc produire des passages portant le
+    même id. On combine avec source_doc pour éviter de sauter par erreur un
+    passage d'un nouveau document sous prétexte qu'un AUTRE document avait
+    déjà un passage "p0001".
+    """
+    return {(a.source_doc, a.passage_id) for a in load_annotations(path)}
 
 
 def to_training_arrays(annotations: list[Annotation]) -> tuple[list[str], np.ndarray]:
