@@ -57,6 +57,12 @@ def _get_client() -> OpenAI:
     return _client
 
 
+def get_client() -> OpenAI:
+    """Accès public au client OpenAI partagé -- utilisé par app/streamlit_app.py
+    pour l'auto-annotation, sans dupliquer la logique d'instanciation."""
+    return _get_client()
+
+
 def embed_passages(texts: list[str]) -> np.ndarray:
     """Calcule les embeddings d'une liste de textes via l'API OpenAI.
 
@@ -73,6 +79,52 @@ def embed_passages(texts: list[str]) -> np.ndarray:
         all_embeddings.extend(item.embedding for item in response.data)
 
     return np.array(all_embeddings)
+
+
+# --------------------------------------------------------------------------- #
+# Auto-annotation par LLM (optionnelle, pour accélérer la constitution du corpus)
+#
+# ATTENTION méthodologique (à documenter explicitement dans le rapport si
+# utilisé) : contrairement au labelling manuel, ces labels ne constituent PAS
+# une vérité terrain indépendante -- ils reflètent le jugement d'un LLM, pas
+# celui d'un humain. Les utiliser en trop grande proportion réduit la valeur
+# des métriques de classification calculées ensuite (section 6.1 du rapport),
+# qui mesureraient alors la capacité du classifieur à imiter le LLM plutôt
+# qu'une réelle qualité pédagogique. À utiliser avec parcimonie, idéalement en
+# complément d'un noyau de labels manuels, jamais en remplacement total.
+# Chaque label produit ainsi est marqué annotated_by="llm" (cf. dataset.py)
+# pour rester traçable et permettre de calculer la part réellement manuelle
+# du corpus (voir corpus_statistics()).
+# --------------------------------------------------------------------------- #
+
+_LLM_LABEL_SYSTEM_PROMPT = (
+    "Tu juges si un passage de texte extrait d'un support de cours contient assez "
+    "d'information factuelle (fait précis, date, chiffre, définition, nom propre) "
+    "pour qu'on puisse en tirer une bonne question de quiz à réponse unique et vérifiable. "
+    "Réponds UNIQUEMENT avec un objet JSON strict, sans texte avant ni après, au format : "
+    '{"quizable": true} ou {"quizable": false}'
+)
+
+
+def llm_label_passage(client: OpenAI, text: str) -> bool:
+    """Demande au LLM de juger un passage quizable ou non. Utilisé uniquement
+    par l'auto-annotation optionnelle (voir avertissement ci-dessus)."""
+    import json
+
+    response = client.chat.completions.create(
+        model=CONFIG.openai_model,
+        max_tokens=20,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": _LLM_LABEL_SYSTEM_PROMPT},
+            {"role": "user", "content": text},
+        ],
+    )
+    try:
+        payload = json.loads(response.choices[0].message.content or "{}")
+        return bool(payload.get("quizable", False))
+    except json.JSONDecodeError:
+        return False
 
 
 # --------------------------------------------------------------------------- #

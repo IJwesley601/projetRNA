@@ -152,45 +152,49 @@ def extract_passages(
     passages: list[Passage] = []
     counter = 0
 
-    for page_number, page in enumerate(doc, start=1):
-        raw_text = page.get_text("text")
-        page_contents: list[tuple[str, str]] = []  # (source_type, texte_brut)
-        used_vision = False
+    try:
+        for page_number, page in enumerate(doc, start=1):
+            raw_text = page.get_text("text")
+            page_contents: list[tuple[str, str]] = []  # (source_type, texte_brut)
+            used_vision = False
 
-        if raw_text.strip():
-            page_contents.append(("texte", raw_text))
-        elif client is not None:
-            used_vision = True
-            if progress_callback:
-                progress_callback(page_number, total_pages, "page scannée : lecture par OCR (vision)...")
-            ocr_text = _ocr_page(client, page)
-            if ocr_text:
-                page_contents.append(("image_ocr", ocr_text))
-
-        if client is not None:
-            n_images = len(page.get_images(full=True))
-            if n_images:
+            if raw_text.strip():
+                page_contents.append(("texte", raw_text))
+            elif client is not None:
                 used_vision = True
                 if progress_callback:
-                    progress_callback(
-                        page_number, total_pages,
-                        f"analyse de {min(n_images, MAX_IMAGES_PER_PAGE)} image(s) (vision)...",
-                    )
-            for description in _describe_embedded_images(client, doc, page):
-                page_contents.append(("image_description", description))
+                    progress_callback(page_number, total_pages, "page scannée : lecture par OCR (vision)...")
+                ocr_text = _ocr_page(client, page)
+                if ocr_text:
+                    page_contents.append(("image_ocr", ocr_text))
 
-        for source_type, raw in page_contents:
-            cleaned = clean_text(raw)
-            if not cleaned:
-                continue
-            for chunk in split_into_passages(cleaned, CONFIG.min_passage_chars, CONFIG.max_passage_chars):
-                counter += 1
-                passages.append(Passage(id=f"p{counter:04d}", text=chunk, page=page_number, source_type=source_type))
+            if client is not None:
+                n_images = len(page.get_images(full=True))
+                if n_images:
+                    used_vision = True
+                    if progress_callback:
+                        progress_callback(
+                            page_number, total_pages,
+                            f"analyse de {min(n_images, MAX_IMAGES_PER_PAGE)} image(s) (vision)...",
+                        )
+                for description in _describe_embedded_images(client, doc, page):
+                    page_contents.append(("image_description", description))
 
-        if progress_callback and not used_vision:
-            progress_callback(page_number, total_pages, "texte extrait directement")
+            for source_type, raw in page_contents:
+                cleaned = clean_text(raw)
+                if not cleaned:
+                    continue
+                for chunk in split_into_passages(cleaned, CONFIG.min_passage_chars, CONFIG.max_passage_chars):
+                    counter += 1
+                    passages.append(Passage(id=f"p{counter:04d}", text=chunk, page=page_number, source_type=source_type))
 
-    doc.close()
+            if progress_callback and not used_vision:
+                progress_callback(page_number, total_pages, "texte extrait directement")
+    finally:
+        # Toujours fermer le document, même si l'extraction est interrompue en cours de route
+        # (ex. StopException levée par Streamlit lors d'un rerun) -- sans ça, le fichier PDF
+        # temporaire reste verrouillé côté OS et sa suppression échoue ensuite (Windows surtout).
+        doc.close()
 
     if not passages:
         raise ValueError(

@@ -24,7 +24,7 @@ import streamlit as st
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.classification import QuizableClassifier, select_quizable_passages  # noqa: E402
+from src.classification import QuizableClassifier, get_client, llm_label_passage, select_quizable_passages  # noqa: E402
 from src.dataset import (  # noqa: E402
     Annotation,
     already_annotated_ids,
@@ -232,6 +232,17 @@ def reset_quiz() -> None:
 init_state()
 
 
+def _safe_unlink(path: Path) -> None:
+    """Supprime un fichier temporaire sans planter l'app si le fichier est encore
+    verrouillé par l'OS (arrive parfois sur Windows après une interruption de
+    l'extraction PDF). Le fichier _tmp_*.pdf est de toute façon écrasé au
+    prochain upload, donc le laisser traîner un instant n'est pas grave."""
+    try:
+        path.unlink(missing_ok=True)
+    except (PermissionError, OSError) as exc:
+        print(f"[app] impossible de supprimer {path} pour l'instant, ignoré ({exc.__class__.__name__})")
+
+
 # --------------------------------------------------------------------------- #
 # En-tête + vérification de la clé API (commune aux deux modes)
 # --------------------------------------------------------------------------- #
@@ -304,6 +315,7 @@ with st.sidebar:
         col2.metric("Non quizables", stats["n_non_quizable"])
         st.caption(f"Documents distincts : {stats['n_documents']}")
         st.caption(f"Longueur moyenne : {stats['avg_passage_length']:.0f} caractères")
+        st.caption(f"Annoté manuellement : {stats['pct_manuel']:.0%} (reste : IA)")
 
         if stats["n_passages"] < 40:
             st.warning(f"Objectif recommandé : ≥ 80 passages (actuellement {stats['n_passages']}).")
@@ -405,7 +417,7 @@ def render_quiz_mode() -> None:
             except ValueError as exc:
                 st.error(str(exc))
             finally:
-                tmp_path.unlink(missing_ok=True)
+                _safe_unlink(tmp_path)
 
             st.rerun()
 
@@ -478,6 +490,15 @@ def render_annotate_mode() -> None:
         help="Utilise la vision de l'API OpenAI pour lire le texte des pages scannées et "
              "décrire les schémas/graphiques.",
     )
+    auto_annotate_enabled = st.checkbox(
+        "🤖 Activer l'auto-annotation par IA (expérimental)",
+        value=False,
+        key="annotate_auto_enabled",
+        help="Le LLM juge à ta place si chaque passage est quizable. Gain de temps, mais "
+             "attention : ces labels ne sont plus une vérité terrain humaine indépendante -- "
+             "ils sont marqués 'llm' (vs 'manuel') dans le jeu de données pour rester traçables. "
+             "À utiliser avec parcimonie et à documenter explicitement dans le rapport.",
+    )
 
     if uploaded_file is not None and uploaded_file.name != st.session_state.annotate_doc_name:
         tmp_path = PROJECT_ROOT / "app" / "_tmp_annotate.pdf"
@@ -497,7 +518,7 @@ def render_annotate_mode() -> None:
             st.error(str(exc))
             all_passages = []
         finally:
-            tmp_path.unlink(missing_ok=True)
+            _safe_unlink(tmp_path)
 
         already_done = already_annotated_ids()
         remaining = [p for p in all_passages if (uploaded_file.name, p.id) not in already_done]
@@ -524,6 +545,46 @@ def render_annotate_mode() -> None:
             )
         )
         st.session_state.annotate_n_labeled_session += 1
+
+    if st.session_state.annotate_passages:
+        remaining_count = len(st.session_state.annotate_passages)
+
+        if auto_annotate_enabled:
+            st.warning(
+                f"⚠️ Auto-annotation activée : le LLM va juger les {remaining_count} passage(s) "
+                "restant(s) à ta place. Ces labels seront marqués 'llm', pas 'manuel'.",
+                icon="🤖",
+            )
+            if st.button(f"⚡ Auto-annoter les {remaining_count} passage(s) restant(s) avec l'IA"):
+                client = get_client()
+                auto_progress = st.progress(0.0, text="Auto-annotation en cours...")
+                n_quizable = 0
+
+                while st.session_state.annotate_passages:
+                    passage = st.session_state.annotate_passages.pop(0)
+                    is_quizable = llm_label_passage(client, passage.text)
+                    n_quizable += int(is_quizable)
+                    append_annotation(
+                        Annotation(
+                            passage_id=passage.id,
+                            text=passage.text,
+                            source_doc=st.session_state.annotate_doc_name,
+                            page=passage.page,
+                            label=int(is_quizable),
+                            annotated_by="llm",
+                            source_type=passage.source_type,
+                        )
+                    )
+                    st.session_state.annotate_n_labeled_session += 1
+                    done = st.session_state.annotate_n_labeled_session
+                    auto_progress.progress(
+                        done / (done + len(st.session_state.annotate_passages)),
+                        text=f"{done} passage(s) auto-annoté(s)...",
+                    )
+
+                auto_progress.empty()
+                st.rerun()
+            st.divider()
 
     if st.session_state.annotate_passages:
         passage = st.session_state.annotate_passages[0]
