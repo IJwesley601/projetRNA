@@ -1,15 +1,9 @@
-"""
-main.py
-Point d'entrée en ligne de commande du pipeline, utile pour tester
-rapidement sans passer par Streamlit, ou pour scripter des évaluations
-(ex. depuis notebooks/analyse_resultats.ipynb).
-
-Usage :
-    python main.py chemin/vers/document.pdf --n-questions 5
-"""
-
 from __future__ import annotations
 
+import utils.clients
+import utils.http_session
+import utils.transport
+import utils.session
 import argparse
 import json
 

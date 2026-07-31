@@ -1,24 +1,3 @@
-"""
-dataset.py
-Gestion du jeu de données annoté pour le bloc 2 (classification.py).
-
-Format retenu (à documenter dans le rapport, section "Jeu de données") :
-un fichier JSONL (`data/annotations.jsonl`), une annotation par ligne, avec :
-{
-    "passage_id": "p0007",
-    "text": "...",
-    "source_doc": "cours_deep_learning.pdf",
-    "page": 3,
-    "label": 1,          # 1 = quizable, 0 = non quizable
-    "annotated_by": "manuel"   # "manuel" ou "heuristique" (bootstrap)
-}
-
-Ce format simple (une ligne JSON = un exemple) est lisible par n'importe qui
-sans outil spécifique, facilement versionnable avec Git, et suffisant pour
-la taille de corpus visée par ce projet (quelques dizaines à quelques
-centaines de passages).
-"""
-
 from __future__ import annotations
 
 import json

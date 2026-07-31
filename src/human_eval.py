@@ -1,28 +1,3 @@
-"""
-human_eval.py
-Évaluation humaine de la qualité des questions générées (bloc 3/4).
-
-C'est la méthode d'évaluation qualité RECOMMANDÉE pour ce projet (cf.
-evaluation.py) tant qu'aucun jeu de questions de référence n'existe : un
-humain note chaque question générée sur 3 critères indépendants, ce qui
-donne une mesure directe de qualité pédagogique -- contrairement aux
-contrôles structurels (QuizQualityReport) qui ne détectent que les erreurs
-de format, ou à BLEU/ROUGE qui mesurent une similarité de surface avec une
-référence.
-
-Format retenu (même logique que dataset.py) : un fichier JSONL
-(`data/human_eval.jsonl`), une évaluation par ligne :
-{
-    "question_text": "...",
-    "source_passage_id": "p0007",
-    "source_doc": "cours_deep_learning.pdf",
-    "pertinence": 4,               # 1-5 : porte sur une info importante du passage ?
-    "clarte": 5,                   # 1-5 : formulation claire, sans ambiguïté ?
-    "distracteurs_plausibles": 3,  # 1-5 : les mauvaises réponses sont-elles plausibles ?
-    "commentaire": "Distracteur B trop évident"
-}
-"""
-
 from __future__ import annotations
 
 import json

@@ -1,16 +1,3 @@
-"""
-generation.py
-Bloc 3 (+4) du pipeline : génération de questions QCM à partir des passages
-jugés "quizables", via l'API OpenAI (modèle gpt-4.1-mini par défaut, en
-prompt engineering, cf. cadrage du projet : "LLM en zero/few-shot" plutôt
-que fine-tuning, pour rester réaliste dans le temps imparti au projet tout
-en produisant une démo de bonne qualité).
-
-Chaque question générée inclut directement ses distracteurs (bloc 4 du
-pipeline d'origine) : on les génère en même temps que la bonne réponse pour
-garantir leur cohérence thématique avec la question.
-"""
-
 from __future__ import annotations
 
 import json

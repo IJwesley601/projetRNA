@@ -1,27 +1,3 @@
-"""
-evaluation.py
-Bloc d'analyse des résultats.
-
-Point d'attention rappelé dans le cadrage du projet : Accuracy/Precision/
-Recall/F1/matrice de confusion sont des métriques de CLASSIFICATION. Elles
-s'appliquent donc au bloc 2 (classification.py : passage quizable ou non),
-pas à la génération de texte elle-même.
-
-Pour la génération de questions (bloc 3), on distingue deux niveaux :
-- des contrôles STRUCTURELS automatiques (une question a bien 4 options,
-  une seule bonne réponse, pas de distracteur dupliqué, etc.) ;
-- une évaluation de la QUALITÉ qui, pour être rigoureuse, nécessite soit des
-  questions de référence écrites par un humain (métriques BLEU/ROUGE de
-  similarité), soit une évaluation humaine sur échantillon (recommandée
-  dans le rapport, cf. cadrage : "précisez-le pour montrer que vous
-  comprenez la différence").
-
-Note technique : les métriques ci-dessous sont calculées "à la main" avec
-numpy plutôt qu'avec scikit-learn, pour éviter la dépendance à scipy
-(bloquée par la politique de sécurité Windows sur ce poste, cf. classification.py).
-Ce sont des formules standard, sans piège particulier.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

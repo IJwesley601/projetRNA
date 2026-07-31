@@ -1,17 +1,3 @@
-"""
-streamlit_app.py
-Application unique du projet, avec deux modes accessibles depuis la barre
-latérale :
-
-- 🧠 Générer un quiz : la démo finale (upload PDF -> quiz interactif corrigé).
-- 🏷️ Annoter des passages : outil de travail pour construire le jeu de
-  données annoté (data/annotations.jsonl), utilisé ensuite par
-  `scripts/train_classifier.py` pour entraîner le classifieur du bloc 2.
-
-Les deux modes partagent la même app mais des états de session distincts
-(préfixés `quiz_` et `annotate_`) pour éviter toute interférence entre eux.
-"""
-
 from __future__ import annotations
 
 import sys

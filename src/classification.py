@@ -1,34 +1,3 @@
-"""
-classification.py
-Bloc 2 du pipeline : sélection des passages "quizables" (contenant assez
-d'information factuelle pour générer une bonne question) parmi tous les
-passages extraits.
-
-Approche (cf. cadrage du projet) :
-- Représentation : embeddings de phrases via l'API OpenAI (text-embedding-3-small),
-  cohérent avec le cours NLP (section "Contextual embeddings") -- on utilise l'API
-  plutôt qu'un modèle local (sentence-transformers) pour éviter la dépendance à
-  torch, dont les DLL natives sont bloquées par certaines stratégies de sécurité
-  Windows (WDAC/AppLocker) sur les postes gérés par un service IT.
-- Modélisation : classification binaire supervisée. On implémente ici une
-  régression logistique "from scratch" avec numpy (descente de gradient),
-  plutôt que scikit-learn : sur cette machine, scikit-learn importe scipy,
-  dont un module compilé (_specfun) est lui aussi bloqué par la politique de
-  sécurité Windows -- comme torch précédemment. Une implémentation directe
-  reste pédagogiquement pertinente (cohérente avec le cours ML/Deep Learning)
-  et n'a besoin que de numpy, qui fonctionne sans souci sur ce poste.
-- C'est ICI, et seulement ici, que les métriques Accuracy/Precision/Recall/
-  F1/matrice de confusion s'appliquent au sens strict (cf. note du cadrage :
-  ce sont des métriques de classification, pas de génération de texte).
-
-Comme aucun jeu de données annoté n'existe au départ, on fournit :
-1. un labelling heuristique (règles) pour amorcer un premier jeu d'entraînement
-   -- à documenter explicitement comme tel dans le rapport (jeu de données
-   "semi-supervisé", pas une vérité terrain humaine) ;
-2. la possibilité de ré-entraîner le classifieur sur un jeu annoté manuellement
-   une fois disponible (meilleure pratique académique).
-"""
-
 from __future__ import annotations
 
 import re
@@ -83,18 +52,6 @@ def embed_passages(texts: list[str]) -> np.ndarray:
 
 # --------------------------------------------------------------------------- #
 # Auto-annotation par LLM (optionnelle, pour accélérer la constitution du corpus)
-#
-# ATTENTION méthodologique (à documenter explicitement dans le rapport si
-# utilisé) : contrairement au labelling manuel, ces labels ne constituent PAS
-# une vérité terrain indépendante -- ils reflètent le jugement d'un LLM, pas
-# celui d'un humain. Les utiliser en trop grande proportion réduit la valeur
-# des métriques de classification calculées ensuite (section 6.1 du rapport),
-# qui mesureraient alors la capacité du classifieur à imiter le LLM plutôt
-# qu'une réelle qualité pédagogique. À utiliser avec parcimonie, idéalement en
-# complément d'un noyau de labels manuels, jamais en remplacement total.
-# Chaque label produit ainsi est marqué annotated_by="llm" (cf. dataset.py)
-# pour rester traçable et permettre de calculer la part réellement manuelle
-# du corpus (voir corpus_statistics()).
 # --------------------------------------------------------------------------- #
 
 _LLM_LABEL_SYSTEM_PROMPT = (
@@ -209,7 +166,7 @@ def heuristic_quizable_score(text: str) -> float:
     if _DATE_RE.search(text):
         score += 1
         n_signals += 1
-    n_signals += 1  # nombre : toujours compté, même si absent
+    n_signals += 1
     if len(_NUMBER_RE.findall(text)) >= 1:
         score += 1
 

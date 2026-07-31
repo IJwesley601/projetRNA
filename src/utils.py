@@ -1,11 +1,3 @@
-"""
-utils.py
-Fonctions transverses utilisées par les autres modules du pipeline :
-- chargement de la configuration (clé API, paramètres)
-- nettoyage de texte
-- segmentation d'un texte brut en passages exploitables
-"""
-
 from __future__ import annotations
 
 import os

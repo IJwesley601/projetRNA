@@ -1,11 +1,3 @@
-"""
-tests/test_pipeline.py
-Tests unitaires des blocs qui ne dépendent pas de l'API OpenAI
-(utils, extraction locale, heuristique de classification, évaluation).
-
-Lancer avec : pytest tests/
-"""
-
 import sys
 from pathlib import Path
 

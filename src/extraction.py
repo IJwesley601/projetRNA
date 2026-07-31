@@ -1,21 +1,3 @@
-"""
-extraction.py
-Bloc 1 du pipeline : Extraction PDF -> texte propre -> passages segmentés.
-
-Gère trois cas de figure, pour couvrir tous les types de PDF rencontrés en pratique :
-1. Texte natif (le cas courant) -> extrait directement, sans appel API.
-2. Page scannée / sans texte sélectionnable -> OCR via la vision de l'API
-   OpenAI (pas de dépendance locale type Tesseract, pour éviter tout risque
-   de bibliothèque compilée bloquée -- cf. classification.py).
-3. Images/schémas intégrés dans une page qui a par ailleurs du texte
-   (diagramme, graphique...) -> description factuelle via la même API
-   vision, ajoutée comme passage à part entière, taggé pour traçabilité.
-
-L'usage de la vision est optionnel (paramètre use_vision) : si désactivé ou
-si la clé API est absente, le module se comporte comme une extraction texte
-classique (les pages sans texte sont alors simplement ignorées).
-"""
-
 from __future__ import annotations
 
 import base64
@@ -192,8 +174,6 @@ def extract_passages(
                 progress_callback(page_number, total_pages, "texte extrait directement")
     finally:
         # Toujours fermer le document, même si l'extraction est interrompue en cours de route
-        # (ex. StopException levée par Streamlit lors d'un rerun) -- sans ça, le fichier PDF
-        # temporaire reste verrouillé côté OS et sa suppression échoue ensuite (Windows surtout).
         doc.close()
 
     if not passages:
